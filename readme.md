@@ -20,14 +20,17 @@ Bankist is an online banking application that allows the user to:
 
 - Log in with a username and password
 - View and sort their movements
-- Transfer money to another account (js - jd)
+- Transfer money to another accounts
 - Request a loan from the bank
 - Delete their account
+- See current date and dates of the transfers
 
-To log in:
+Log in credentials:
 
 - username: js | password: 1111
-- username: jd | password 2222
+- username: jd | password: 2222
+- username: stw | password: 3333
+- username: ss | password: 4444
 
 ### Links
 
