@@ -45,6 +45,16 @@ const account3 = {
   movements: [200, -200, 340, -300, -20, 50, 400, -460],
   interestRate: 0.7,
   pin: 3333,
+  movementsDates: [
+    '2022-04-07T06:31:17.178Z',
+    '2022-04-08T07:42:02.383Z',
+    '2022-04-04T09:15:04.904Z',
+    '2020-01-25T14:18:46.235Z',
+    '2020-02-05T16:33:06.386Z',
+    '2020-04-10T14:43:26.374Z',
+    '2020-06-25T18:49:59.371Z',
+    '2020-07-26T12:01:20.894Z',
+  ],
 };
 
 const account4 = {
@@ -52,6 +62,16 @@ const account4 = {
   movements: [430, 1000, 700, 50, 90],
   interestRate: 1,
   pin: 4444,
+  movementsDates: [
+    '2022-04-07T06:31:17.178Z',
+    '2022-04-08T07:42:02.383Z',
+    '2022-04-04T09:15:04.904Z',
+    '2020-01-25T14:18:46.235Z',
+    '2020-02-05T16:33:06.386Z',
+    '2020-04-10T14:43:26.374Z',
+    '2020-06-25T18:49:59.371Z',
+    '2020-07-26T12:01:20.894Z',
+  ],
 };
 
 const accounts = [account1, account2, account3, account4];
@@ -83,26 +103,47 @@ const inputTransferAmount = document.querySelector('.form__input--amount');
 const inputLoanAmount = document.querySelector('.form__input--loan-amount');
 const inputCloseUsername = document.querySelector('.form__input--user');
 const inputClosePin = document.querySelector('.form__input--pin');
+
 let time;
 
-labelDate.textContent = new Date();
+let sorted;
 /////////////////////////////////////////////////
 // Functions
 
-const displayMovements = function (movements, sort = false) {
+const createUsernames = function (accs) {
+  accs.forEach(function (acc) {
+    acc.username = acc.owner
+      .toLowerCase()
+      .split(' ')
+      .map(name => name[0])
+      .join('');
+  });
+};
+createUsernames(accounts);
+
+const displayMovements = function (acc, sort = false) {
   containerMovements.innerHTML = '';
 
-  const movs = sort ? movements.slice().sort((a, b) => a - b) : movements;
+  const movs = sort
+    ? acc.movements.slice().sort((a, b) => a - b)
+    : acc.movements;
 
   movs.forEach(function (mov, i) {
     const type = mov > 0 ? 'deposit' : 'withdrawal';
+
+    const date = new Date(acc.movementsDates[i]);
+    const day = `${date.getDate()}`.padStart(2, 0);
+    const month = `${date.getMonth() + 1}`.padStart(2, 0);
+    const year = date.getFullYear();
+    const displayDate = (labelDate.textContent = `${day}/${month}/${year}`);
 
     const html = `
       <div class="movements__row">
         <div class="movements__type movements__type--${type}">${
       i + 1
     } ${type}</div>
-        <div class="movements__value">${mov}€</div>
+    <div class="movements__date">${displayDate}</div>
+        <div class="movements__value">${mov.toFixed(2)}€</div>
       </div>
     `;
 
@@ -136,20 +177,9 @@ const calcDisplaySummary = function (acc) {
   labelSumInterest.textContent = `${interest}€`;
 };
 
-const createUsernames = function (accs) {
-  accs.forEach(function (acc) {
-    acc.username = acc.owner
-      .toLowerCase()
-      .split(' ')
-      .map(name => name[0])
-      .join('');
-  });
-};
-createUsernames(accounts);
-
 const updateUI = function (acc) {
   // Display movements
-  displayMovements(acc.movements);
+  displayMovements(acc);
 
   // Display balance
   calcDisplayBalance(acc);
@@ -180,6 +210,7 @@ btnLogin.addEventListener('click', function (e) {
       currentAccount.owner.split(' ')[0]
     }`;
     containerApp.style.opacity = 100;
+    formLogin.style.visibility = 'hidden';
 
     // Clear input fields
     inputLoginUsername.value = inputLoginPin.value = '';
@@ -188,6 +219,20 @@ btnLogin.addEventListener('click', function (e) {
     // Update UI
     updateUI(currentAccount);
     startLogOutTimer();
+
+    //////// creating a date
+    const now = new Date();
+    const day = `${now.getDate()}`.padStart(2, 0);
+    const month = `${now.getMonth() + 1}`.padStart(2, 0);
+    const year = now.getFullYear();
+    const hour = `${now.getHours()}`.padStart(2, 0);
+    const min = `${now.getMinutes()}`.padStart(2, 0);
+    labelDate.textContent = `${day}/${month}/${year}, ${hour}:${min}`;
+    console.log(labelDate.textContent);
+  } else {
+    alert(
+      `Sorry, that username and pin combination cannot be found.\nPlease try again.`
+    );
   }
 });
 
@@ -199,7 +244,17 @@ btnTransfer.addEventListener('click', function (e) {
   );
   inputTransferAmount.value = inputTransferTo.value = '';
 
-  if (
+  if (receiverAcc?.username === currentAccount.username) {
+    alert(`Sorry, you can not make deposits to yourself. Please try again.`);
+    inputTransferTo.value = inputTransferAmount.value = '';
+  } else if (amount > currentAccount.balance) {
+    alert(
+      `Sorry, your current balance is too low to transfer this amount of funds.\n
+      Your current balance is ${balance}, which is the most you'd be allowed to transfer.\n
+      Please transfer a smaller amount.`
+    );
+    inputTransferTo.value = inputTransferAmount.value = '';
+  } else if (
     amount > 0 &&
     receiverAcc &&
     currentAccount.balance >= amount &&
@@ -215,6 +270,11 @@ btnTransfer.addEventListener('click', function (e) {
 
     // Update UI
     updateUI(currentAccount);
+  } else {
+    alert(
+      `Sorry, that account either does not exist or\nyou do not have permissions to transfer to that account`
+    );
+    inputTransferTo.value = inputTransferAmount.value = '';
   }
 });
 
@@ -226,6 +286,9 @@ btnLoan.addEventListener('click', function (e) {
   if (amount > 0 && currentAccount.movements.some(mov => mov >= amount * 0.1)) {
     // Add movement
     currentAccount.movements.push(amount);
+
+    // Add loan date
+    currentAccount.movementsDates.push(new Date().toISOString());
 
     // Update UI
     updateUI(currentAccount);
@@ -253,21 +316,21 @@ btnClose.addEventListener('click', function (e) {
   inputCloseUsername.value = inputClosePin.value = '';
 });
 
-let sorted = false;
+sorted = false;
 btnSort.addEventListener('click', function (e) {
   e.preventDefault();
-  displayMovements(currentAccount.movements, !sorted);
+  displayMovements(currentAccount, !sorted);
   sorted = !sorted;
 });
 
-///////// 5 minute Log Out Timer
+///////////// 5 minute Log Out Timer
 const startLogOutTimer = function () {
   // set time to 5 minutes
   time = 300;
   const timer = setInterval(function () {
     // call the timer every second
     const min = String(Math.trunc(time / 60)).padStart(2, 0);
-    const sec = String(Math.trunc(time % 60)).padStart(2, 0);
+    const sec = String(time % 60).padStart(2, 0);
 
     // print remaining time to UI
     labelTimer.textContent = `${min}:${sec}`;
